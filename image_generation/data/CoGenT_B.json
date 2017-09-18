@@ -1,0 +1,11 @@
+{
+  "cube": [
+    "red", "green", "purple", "cyan"
+  ],
+  "cylinder": [
+    "gray", "blue", "brown", "yellow"
+  ],
+  "sphere": [
+    "gray", "red", "blue", "green", "brown", "purple", "cyan", "yellow"  
+  ]
+}

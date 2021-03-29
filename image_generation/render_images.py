@@ -9,7 +9,9 @@ from __future__ import print_function
 import math, sys, random, argparse, json, os, tempfile
 from datetime import datetime as dt
 from collections import Counter
-
+import sys
+import time
+sys.path.insert(0,r'E:/Github/public/clevr-dataset-gen/image_generation/')
 """
 Renders random scenes using Blender, each with with a random number of objects;
 each object has a random size, position, color, and shape. Objects will be
@@ -261,7 +263,7 @@ def render_scene(args,
   }
 
   # Put a plane on the ground so we can compute cardinal directions
-  bpy.ops.mesh.primitive_plane_add(radius=5)
+  bpy.ops.mesh.primitive_plane_add(size=5)
   plane = bpy.context.object
 
   def rand(L):
@@ -276,9 +278,9 @@ def render_scene(args,
   # them in the scene structure
   camera = bpy.data.objects['Camera']
   plane_normal = plane.data.vertices[0].normal
-  cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
-  cam_left = camera.matrix_world.to_quaternion() * Vector((-1, 0, 0))
-  cam_up = camera.matrix_world.to_quaternion() * Vector((0, 1, 0))
+  cam_behind = camera.matrix_world.to_quaternion() @ Vector((0, 0, -1))
+  cam_left = camera.matrix_world.to_quaternion() @ Vector((-1, 0, 0))
+  cam_up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
@@ -489,6 +491,7 @@ def check_visibility(blender_objects, min_pixels_per_object):
   p = list(img.pixels)
   color_count = Counter((p[i], p[i+1], p[i+2], p[i+3])
                         for i in range(0, len(p), 4))
+  time.sleep(0.1)
   os.remove(path)
   if len(color_count) != len(blender_objects) + 1:
     return False
@@ -510,18 +513,19 @@ def render_shadeless(blender_objects, path='flat.png'):
   # Cache the render args we are about to clobber
   old_filepath = render_args.filepath
   old_engine = render_args.engine
-  old_use_antialiasing = render_args.use_antialiasing
+  old_use_antialiasing = render_args.simplify_gpencil_antialiasing
 
   # Override some render settings to have flat shading
   render_args.filepath = path
-  render_args.engine = 'BLENDER_RENDER'
-  render_args.use_antialiasing = False
+  render_args.engine = 'BLENDER_WORKBENCH'
+  render_args.simplify_gpencil_antialiasing = False
 
-  # Move the lights and ground to layer 2 so they don't render
-  utils.set_layer(bpy.data.objects['Lamp_Key'], 2)
-  utils.set_layer(bpy.data.objects['Lamp_Fill'], 2)
-  utils.set_layer(bpy.data.objects['Lamp_Back'], 2)
-  utils.set_layer(bpy.data.objects['Ground'], 2)
+  # Move the lights and ground to layer 2 so they don't render 
+  # 2.8 changes https://wiki.blender.org/wiki/Reference/Release_Notes/2.80/Python_API/Scene_and_Object_API 
+  # utils.set_layer(bpy.data.objects['Lamp_Key'], 2)
+  # utils.set_layer(bpy.data.objects['Lamp_Fill'], 2)
+  # utils.set_layer(bpy.data.objects['Lamp_Back'], 2)
+  # utils.set_layer(bpy.data.objects['Ground'], 2)
 
   # Add random shadeless materials to all objects
   object_colors = set()
@@ -535,8 +539,8 @@ def render_shadeless(blender_objects, path='flat.png'):
       r, g, b = [random.random() for _ in range(3)]
       if (r, g, b) not in object_colors: break
     object_colors.add((r, g, b))
-    mat.diffuse_color = [r, g, b]
-    mat.use_shadeless = True
+    mat.diffuse_color = [r, g, b,1] # R G B Alpha
+    mat.use_nodes = True
     obj.data.materials[0] = mat
 
   # Render the scene
@@ -547,15 +551,15 @@ def render_shadeless(blender_objects, path='flat.png'):
     obj.data.materials[0] = mat
 
   # Move the lights and ground back to layer 0
-  utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
-  utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
-  utils.set_layer(bpy.data.objects['Lamp_Back'], 0)
-  utils.set_layer(bpy.data.objects['Ground'], 0)
+  # utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
+  # utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
+  # utils.set_layer(bpy.data.objects['Lamp_Back'], 0)
+  # utils.set_layer(bpy.data.objects['Ground'], 0)
 
   # Set the render settings back to what they were
   render_args.filepath = old_filepath
   render_args.engine = old_engine
-  render_args.use_antialiasing = old_use_antialiasing
+  render_args.simplify_gpencil_antialiasing = old_use_antialiasing
 
   return object_colors
 

@@ -37,8 +37,8 @@ def parse_args(parser, argv=None):
 def delete_object(obj):
   """ Delete a specified blender object """
   for o in bpy.data.objects:
-    o.select = False
-  obj.select = True
+    o.select_set(False)
+  obj.select_set(True)
   bpy.ops.object.delete()
 
 
@@ -100,7 +100,7 @@ def add_object(object_dir, name, scale, loc, theta=0):
 
   # Set the new object as active, then rotate, scale, and translate it
   x, y = loc
-  bpy.context.scene.objects.active = bpy.data.objects[new_name]
+  bpy.context.view_layer.objects.active = bpy.data.objects[new_name]
   bpy.context.object.rotation_euler[2] = theta
   bpy.ops.transform.resize(value=(scale, scale, scale))
   bpy.ops.transform.translate(value=(x, y, scale))
